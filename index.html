@@ -1,144 +1,3 @@
-<?php
-// Your Google Drive file ID
-$defaultFileId = '1qOMbyhkbt_basf53QRQ1hhFwIa0UdqNp';
-$fileId = isset($_GET['id']) && !empty($_GET['id'])
-    ? preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['id'])
-    : $defaultFileId;
-
-// Stream the video if ?stream=1 is set; otherwise render the HTML player
-if (isset($_GET['stream']) && $_GET['stream'] == '1') {
-    if (empty($fileId)) {
-        http_response_code(400);
-        exit('File ID missing');
-    }
-
-    @set_time_limit(0);
-
-    // Disable output buffering so streaming stays smooth
-    if (function_exists('apache_setenv')) {
-        @apache_setenv('no-gzip', 1);
-    }
-    @ini_set('zlib.output_compression', 0);
-    @ini_set('implicit_flush', 1);
-    while (ob_get_level() > 0) {
-        ob_end_flush();
-    }
-    ob_implicit_flush(1);
-
-    $baseHeaders = [
-        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept: */*",
-        "Connection: keep-alive"
-    ];
-
-    $rangeHeader = isset($_SERVER['HTTP_RANGE']) ? ["Range: " . $_SERVER['HTTP_RANGE']] : [];
-
-    // Probe a small byte range first to see if Google Drive returns the file directly or an HTML confirmation page
-    $probeUrl = "https://drive.usercontent.google.com/download?id=" . $fileId . "&export=download";
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $probeUrl,
-        CURLOPT_HTTPHEADER => array_merge($baseHeaders, ["Range: bytes=0-65535"]),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HEADER => true,
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_TIMEOUT => 30,
-    ]);
-    $probeResponse = curl_exec($ch);
-    $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-    $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
-    curl_close($ch);
-
-    $rawHeaders = substr($probeResponse, 0, $headerSize);
-    $bodySnippet = substr($probeResponse, $headerSize);
-    $streamUrl = $effectiveUrl ?: $probeUrl;
-
-    // For large files, extract form action and hidden inputs if Google Drive returns an HTML download warning page
-    if (stripos($rawHeaders, 'text/html') !== false || stripos($bodySnippet, '<!doctype html') !== false || stripos($bodySnippet, '<html') !== false) {
-        if (preg_match('/action="([^"]+)"/i', $bodySnippet, $actionMatch)) {
-            $formAction = html_entity_decode($actionMatch[1], ENT_QUOTES, 'UTF-8');
-            $queryParams = [];
-
-            if (preg_match_all('/<input[^>]*name="([^"]+)"[^>]*value="([^"]*)"/i', $bodySnippet, $inputs, PREG_SET_ORDER)) {
-                foreach ($inputs as $inp) {
-                    $queryParams[$inp[1]] = html_entity_decode($inp[2], ENT_QUOTES, 'UTF-8');
-                }
-            }
-
-            if (!isset($queryParams['id'])) {
-                $queryParams['id'] = $fileId;
-            }
-            if (!isset($queryParams['export'])) {
-                $queryParams['export'] = 'download';
-            }
-            if (!isset($queryParams['confirm'])) {
-                $queryParams['confirm'] = 't';
-            }
-
-            $sep = (strpos($formAction, '?') === false) ? '?' : '&';
-            $streamUrl = $formAction . $sep . http_build_query($queryParams);
-        } else {
-            $streamUrl = "https://drive.usercontent.google.com/download?id=" . $fileId . "&export=download&confirm=t";
-        }
-    }
-
-    // Start streaming the actual video
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $streamUrl,
-        CURLOPT_HTTPHEADER => array_merge($baseHeaders, $rangeHeader),
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_BUFFERSIZE => 1024 * 1024, // 1MB buffer
-        CURLOPT_RETURNTRANSFER => false,
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_HEADERFUNCTION => function ($curl, $header) {
-            $len = strlen($header);
-            $trimmed = trim($header);
-            if ($trimmed === '') {
-                return $len;
-            }
-
-            if (stripos($trimmed, 'HTTP/') === 0) {
-                header($trimmed, true);
-                return $len;
-            }
-
-            $parts = explode(':', $trimmed, 2);
-            if (count($parts) === 2) {
-                $name = strtolower(trim($parts[0]));
-                $val = trim($parts[1]);
-                $allowed = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
-                if (in_array($name, $allowed, true)) {
-                    // Prevent an HTML error page from being sent as video/mp4
-                    if ($name === 'content-type' && stripos($val, 'text/html') !== false) {
-                        http_response_code(502);
-                        return 0;
-                    }
-                    header($name . ': ' . $val, true);
-                }
-            }
-            return $len;
-        },
-        CURLOPT_WRITEFUNCTION => function ($curl, $data) {
-            if (connection_aborted()) {
-                return 0;
-            }
-            echo $data;
-            @ob_flush();
-            @flush();
-            return strlen($data);
-        }
-    ]);
-
-    curl_exec($ch);
-    curl_close($ch);
-    exit;
-}
-
-$videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) . '&stream=1', ENT_QUOTES, 'UTF-8');
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -157,7 +16,7 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
             --touch-target: 44px;
         }
 
-        * {
+        *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
@@ -564,10 +423,7 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
 <body>
 
     <div class="player-container loading" id="playerContainer">
-        <video id="video" preload="auto" playsinline webkit-playsinline>
-            <source src="<?= $videoSrc ?>" type="video/mp4">
-            Your browser does not support the HTML5 video player.
-        </video>
+        <video id="video" preload="auto" playsinline webkit-playsinline></video>
 
         <div class="loader-wrap" id="loaderWrap">
             <div class="loader"></div>
@@ -640,6 +496,11 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
     </div>
 
     <script>
+        // Point STREAM_PROXY_BASE to your PHP/Worker stream endpoint if passing ?id=FILE_ID
+        const STREAM_PROXY_BASE = '';
+        const DEFAULT_FILE_ID = '1qOMbyhkbt_basf53QRQ1hhFwIa0UdqNp';
+        const DEFAULT_VIDEO_SRC = '';
+
         const container = document.getElementById('playerContainer');
         const video = document.getElementById('video');
         const loaderText = document.getElementById('loaderText');
@@ -659,8 +520,34 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
         const speedSelect = document.getElementById('speedSelect');
         const pipBtn = document.getElementById('pipBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const fsIcon = document.getElementById('fsIcon');
         const skipLeft = document.getElementById('skipLeft');
         const skipRight = document.getElementById('skipRight');
+
+        function resolveStreamUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const rawSrc = params.get('src');
+            if (rawSrc && /^https?:\/\//i.test(rawSrc)) {
+                return rawSrc;
+            }
+
+            const rawId = (params.get('id') || DEFAULT_FILE_ID).replace(/[^a-zA-Z0-9_-]/g, '');
+            if (STREAM_PROXY_BASE && rawId) {
+                const sep = STREAM_PROXY_BASE.includes('?') ? '&' : '?';
+                return `${STREAM_PROXY_BASE}${sep}id=${encodeURIComponent(rawId)}&stream=1`;
+            }
+
+            return DEFAULT_VIDEO_SRC;
+        }
+
+        const resolvedSrc = resolveStreamUrl();
+        if (resolvedSrc) {
+            video.src = resolvedSrc;
+            video.load();
+        } else {
+            loaderText.textContent = 'Set STREAM_PROXY_BASE or pass ?src=VIDEO_URL';
+            container.classList.add('loading');
+        }
 
         let hideControlsTimeout;
         let lastTapTime = 0;
@@ -691,6 +578,7 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
         }
 
         function togglePlay() {
+            if (!video.src) return;
             if (video.paused || video.ended) {
                 video.play().catch(() => {});
             } else {
@@ -785,7 +673,7 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
         video.addEventListener('playing', () => container.classList.remove('loading'));
         video.addEventListener('canplay', () => container.classList.remove('loading'));
         video.addEventListener('error', () => {
-            loaderText.textContent = 'Unable to load video (check if the file is public)';
+            loaderText.textContent = 'Unable to load video (check stream URL & CORS)';
             container.classList.add('loading');
         });
 
@@ -884,48 +772,53 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
                 } else if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
                     await video.requestPictureInPicture();
                 } else if (typeof video.webkitSetPresentationMode === 'function') {
-                    const mode = video.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
-                    video.webkitSetPresentationMode(mode);
+                    const nextMode = video.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture';
+                    video.webkitSetPresentationMode(nextMode);
                 }
             } catch (_) {}
         });
 
-        // Fullscreen (Standard + iOS Safari video element fallback)
+        // Fullscreen Toggle
         function isFullscreen() {
-            return Boolean(document.fullscreenElement || document.webkitFullscreenElement || video.webkitDisplayingFullscreen);
+            return !!(document.fullscreenElement || document.webkitFullscreenElement);
         }
 
-        async function toggleFullscreen() {
+        function updateFullscreenIcon() {
+            if (isFullscreen()) {
+                fsIcon.innerHTML = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
+            } else {
+                fsIcon.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+            }
+        }
+
+        fullscreenBtn.addEventListener('click', async () => {
             try {
-                if (!isFullscreen()) {
-                    if (container.requestFullscreen) {
-                        await container.requestFullscreen();
-                    } else if (container.webkitRequestFullscreen) {
-                        container.webkitRequestFullscreen();
-                    } else if (typeof video.webkitEnterFullscreen === 'function') {
-                        video.webkitEnterFullscreen();
-                    }
+                if (isFullscreen()) {
+                    if (document.exitFullscreen) await document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
                 } else {
-                    if (document.exitFullscreen) {
-                        await document.exitFullscreen();
-                    } else if (document.webkitExitFullscreen) {
-                        document.webkitExitFullscreen();
-                    }
+                    if (container.requestFullscreen) await container.requestFullscreen();
+                    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+                    else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
                 }
             } catch (_) {}
-            setTimeout(syncViewportHeight, 150);
-        }
+        });
 
-        fullscreenBtn.addEventListener('click', toggleFullscreen);
-        video.addEventListener('dblclick', toggleFullscreen);
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
 
         // Auto-hide controls on mouse move / touch
         container.addEventListener('mousemove', resetControlsTimer);
         container.addEventListener('touchstart', resetControlsTimer, { passive: true });
+        container.addEventListener('mouseleave', () => {
+            if (!video.paused && !isScrubbing) {
+                container.classList.add('hide-controls');
+            }
+        });
 
         // Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
-            if (['INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
             switch (e.key.toLowerCase()) {
                 case ' ':
                 case 'k':
@@ -933,16 +826,22 @@ $videoSrc = htmlspecialchars($_SERVER['PHP_SELF'] . '?id=' . urlencode($fileId) 
                     togglePlay();
                     break;
                 case 'arrowleft':
+                case 'j':
+                    e.preventDefault();
                     skip(-10);
                     break;
                 case 'arrowright':
+                case 'l':
+                    e.preventDefault();
                     skip(10);
                     break;
                 case 'm':
+                    e.preventDefault();
                     muteBtn.click();
                     break;
                 case 'f':
-                    toggleFullscreen();
+                    e.preventDefault();
+                    fullscreenBtn.click();
                     break;
             }
         });
