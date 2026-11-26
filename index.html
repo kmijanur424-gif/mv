@@ -19,165 +19,151 @@
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        glass: 'rgba(17, 24, 39, 0.72)',
-                        glassBorder: 'rgba(255, 255, 255, 0.1)',
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 selection:bg-indigo-500 selection:text-white overflow-x-hidden relative">
+<body class="bg-black text-slate-100 w-screen h-[100dvh] m-0 p-0 overflow-hidden select-none selection:bg-indigo-500 selection:text-white">
 
-    <!-- Ambient Background Glow Effects -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div class="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/20 rounded-full blur-[128px]"></div>
-        <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-purple-600/20 rounded-full blur-[128px]"></div>
-    </div>
+    <!-- Full-Viewport Video Player Container -->
+    <main 
+        id="playerContainer" 
+        tabindex="0"
+        class="relative w-screen h-[100dvh] bg-black overflow-hidden group outline-none"
+    >
+        <!-- HTML5 Video Element -->
+        <video 
+            id="videoElement" 
+            class="w-full h-full object-contain bg-black"
+            src="https://cdn.freevidco.com/Sex%20Game%206969.mp4"
+            playsinline
+            preload="auto"
+        ></video>
 
-    <!-- Main Container -->
-    <main id="appContainer" class="w-full max-w-5xl z-10 flex flex-col gap-4 sm:gap-6 transition-all duration-500 ease-out">
-        
-        <!-- Top Bar: URL Loader & Title -->
-        <header id="topBar" class="w-full bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 transition-all duration-300">
-            <div class="flex items-center gap-3 px-1">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 shrink-0">
-                    <i data-lucide="play" class="w-4 h-4 text-white fill-white ml-0.5"></i>
+        <!-- Interactive Gesture Layer (Single tap play/pause, Double tap/click left/right ±10s, Center double-click fullscreen) -->
+        <div id="gestureLayer" class="absolute inset-0 z-10 flex">
+            <!-- Left Zone (-10s on double tap/click) -->
+            <div id="leftZone" class="w-1/3 h-full flex items-center justify-center cursor-pointer relative">
+                <div id="leftSkipRipple" class="opacity-0 scale-75 pointer-events-none flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white transition-all duration-200">
+                    <i data-lucide="rewind" class="w-6 h-6 sm:w-7 sm:h-7 fill-white"></i>
+                    <span class="text-xs font-semibold mt-1">-10s</span>
                 </div>
-                <div class="min-w-0">
-                    <h1 class="text-sm sm:text-base font-semibold tracking-tight text-white truncate">AetherStream Player</h1>
-                    <p id="videoTitleDisplay" class="text-xs text-slate-400 truncate max-w-[240px] sm:max-w-xs">Sex Game 6969.mp4</p>
-                </div>
             </div>
 
-            <!-- Custom Video URL Input Form -->
-            <form id="urlForm" class="flex-1 max-w-xl flex items-center gap-2">
-                <div class="relative flex-1">
-                    <i data-lucide="link" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                    <input 
-                        type="url" 
-                        id="videoUrlInput" 
-                        placeholder="Paste custom MP4 or direct video URL..." 
-                        value="https://cdn.freevidco.com/Sex%20Game%206969.mp4"
-                        required
-                        class="w-full bg-slate-950/70 border border-white/10 focus:border-indigo-500/70 focus:ring-2 focus:ring-indigo-500/20 rounded-xl pl-10 pr-3 py-2 text-xs sm:text-sm text-slate-200 placeholder-slate-500 outline-none transition-all"
-                    >
-                </div>
-                <button 
-                    type="submit" 
-                    class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs sm:text-sm font-medium px-4 py-2 rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-                >
-                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                    <span>Load</span>
-                </button>
-            </form>
-        </header>
-
-        <!-- Notification / Toast Banner (Replaces alert()) -->
-        <div id="toastBanner" class="hidden w-full bg-rose-500/15 border border-rose-500/30 backdrop-blur-md text-rose-200 px-4 py-3 rounded-2xl text-xs sm:text-sm flex items-center justify-between gap-3 transition-all">
-            <div class="flex items-center gap-2.5">
-                <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i>
-                <span id="toastMessage">Unable to load video stream. Check URL or CORS settings.</span>
-            </div>
-            <button id="closeToastBtn" class="text-rose-300 hover:text-white p-1 rounded-lg transition-colors cursor-pointer">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-        </div>
-
-        <!-- Video Player Wrapper -->
-        <div 
-            id="playerContainer" 
-            tabindex="0"
-            class="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_25px_70px_-15px_rgba(0,0,0,0.85)] border border-white/10 group select-none outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
-        >
-            <!-- HTML5 Video Element -->
-            <video 
-                id="videoElement" 
-                class="w-full h-full object-contain bg-black cursor-pointer"
-                src="https://cdn.freevidco.com/Sex%20Game%206969.mp4"
-                playsinline
-                preload="metadata"
-            ></video>
-
-            <!-- Loading Spinner Overlay -->
-            <div id="loadingSpinner" class="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] pointer-events-none opacity-0 transition-opacity duration-200 z-20">
-                <div class="w-12 h-12 rounded-full border-4 border-white/15 border-t-indigo-500 animate-spin"></div>
-            </div>
-
-            <!-- Action Feedback Badge (e.g., +5s, -5s, Volume %, Play/Pause) -->
-            <div id="actionBadge" class="absolute top-6 right-6 bg-slate-900/80 backdrop-blur-md border border-white/15 text-white px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium flex items-center gap-2 opacity-0 scale-95 pointer-events-none transition-all duration-200 z-20 shadow-xl">
-                <span id="actionBadgeText">100%</span>
-            </div>
-
-            <!-- Clickable Center Play/Pause Overlay Button -->
-            <div id="centerOverlay" class="absolute inset-0 flex items-center justify-center bg-black/25 transition-opacity duration-300 z-10 cursor-pointer">
+            <!-- Center Zone (Play/Pause on tap, Fullscreen on desktop double-click) -->
+            <div id="centerZone" class="w-1/3 h-full flex items-center justify-center cursor-pointer relative">
+                <!-- Initial / Paused Center Play Button -->
                 <button 
                     id="centerPlayBtn" 
                     aria-label="Play or Pause Video"
-                    class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-900/65 hover:bg-indigo-600/90 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white shadow-[0_0_40px_rgba(99,102,241,0.4)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                    class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-900/65 hover:bg-indigo-600/90 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white shadow-[0_0_45px_rgba(99,102,241,0.45)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
                 >
-                    <i id="centerPlayIcon" data-lucide="play" class="w-7 h-7 sm:w-8 sm:h-8 fill-white ml-1"></i>
+                    <i data-lucide="play" class="w-7 h-7 sm:w-8 sm:h-8 fill-white ml-1"></i>
                 </button>
+
+                <!-- Animated Tap Play/Pause Feedback Pulse -->
+                <div id="centerPulseBadge" class="absolute pointer-events-none opacity-0 scale-75 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-900/75 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white shadow-2xl transition-all duration-200">
+                    <i id="centerPulseIcon" data-lucide="play" class="w-7 h-7 sm:w-8 sm:h-8 fill-white"></i>
+                </div>
             </div>
 
-            <!-- Bottom Glassmorphism Control Bar -->
-            <div 
-                id="controlsOverlay" 
-                class="absolute inset-x-0 bottom-0 pt-16 pb-3 px-3 sm:px-5 sm:pb-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-all duration-300 z-30 flex flex-col gap-2.5"
+            <!-- Right Zone (+10s on double tap/click) -->
+            <div id="rightZone" class="w-1/3 h-full flex items-center justify-center cursor-pointer relative">
+                <div id="rightSkipRipple" class="opacity-0 scale-75 pointer-events-none flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white transition-all duration-200">
+                    <i data-lucide="fast-forward" class="w-6 h-6 sm:w-7 sm:h-7 fill-white"></i>
+                    <span class="text-xs font-semibold mt-1">+10s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner Overlay -->
+        <div id="loadingSpinner" class="absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[2px] pointer-events-none opacity-0 transition-opacity duration-200 z-20">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 border-white/15 border-t-indigo-500 animate-spin shadow-lg"></div>
+        </div>
+
+        <!-- Clean Error Fallback Overlay (Replaces alert()) -->
+        <div id="errorOverlay" class="hidden absolute inset-0 z-40 bg-black/85 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-4 shadow-lg">
+                <i data-lucide="wifi-off" class="w-7 h-7"></i>
+            </div>
+            <h2 class="text-base sm:text-lg font-semibold text-white mb-1.5">Stream Unavailable</h2>
+            <p id="errorMessage" class="text-xs sm:text-sm text-slate-400 max-w-md mb-5">Unable to load the video stream. The server may be unreachable or blocked by browser restrictions.</p>
+            <button 
+                id="retryBtn" 
+                class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs sm:text-sm font-medium px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-2 cursor-pointer"
             >
-                <!-- Interactive Seek / Progress Bar -->
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                <span>Retry Stream</span>
+            </button>
+        </div>
+
+        <!-- Floating Status Toast Badge (Volume %, Speed, Shortcuts) -->
+        <div id="actionBadge" class="absolute top-5 right-5 sm:top-7 sm:right-7 bg-slate-900/80 backdrop-blur-xl border border-white/15 text-white px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium flex items-center gap-2 opacity-0 scale-95 pointer-events-none transition-all duration-200 z-30 shadow-2xl">
+            <span id="actionBadgeText">100%</span>
+        </div>
+
+        <!-- Bottom Floating Dark Glassmorphism Control Overlay -->
+        <div 
+            id="controlsOverlay" 
+            class="absolute inset-x-0 bottom-0 pt-20 pb-3 px-3 sm:px-6 sm:pb-6 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-all duration-300 z-30 flex flex-col items-center"
+        >
+            <div class="w-full max-w-6xl flex flex-col gap-2 sm:gap-2.5">
+                
+                <!-- Interactive Timeline Scrubber -->
                 <div id="progressContainer" class="relative w-full h-5 flex items-center cursor-pointer group/progress touch-none">
-                    <!-- Hover Time Tooltip -->
+                    <!-- Hover Timestamp Tooltip -->
                     <div 
                         id="hoverTooltip" 
-                        class="absolute -top-8 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md border border-white/15 text-white text-[11px] font-medium px-2 py-0.5 rounded-md pointer-events-none opacity-0 transition-opacity duration-150 shadow-lg whitespace-nowrap"
+                        class="absolute -top-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur-md border border-white/15 text-white text-[11px] font-medium px-2.5 py-0.5 rounded-lg pointer-events-none opacity-0 transition-opacity duration-150 shadow-xl whitespace-nowrap tabular-nums"
                     >
                         00:00
                     </div>
 
                     <!-- Track Background -->
                     <div class="relative w-full h-1.5 group-hover/progress:h-2.5 bg-white/20 rounded-full overflow-hidden transition-all duration-150">
-                        <!-- Buffered Bar -->
+                        <!-- Buffered Progress Bar -->
                         <div id="bufferedBar" class="absolute top-0 left-0 h-full bg-white/30 rounded-full w-0 transition-all duration-200"></div>
-                        <!-- Played Progress Bar -->
-                        <div id="progressBar" class="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full w-0"></div>
+                        <!-- Glowing Accent Fill Bar -->
+                        <div id="progressBar" class="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-[0_0_12px_rgba(139,92,246,0.85)] rounded-full w-0"></div>
                     </div>
 
-                    <!-- Scrubber Thumb -->
+                    <!-- Draggable Scrubber Thumb -->
                     <div 
                         id="progressThumb" 
-                        class="absolute left-0 -translate-x-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full shadow-[0_0_12px_rgba(255,255,255,0.9)] scale-0 group-hover/progress:scale-100 transition-transform duration-150 pointer-events-none"
+                        class="absolute left-0 -translate-x-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full shadow-[0_0_14px_rgba(255,255,255,0.95)] scale-0 group-hover/progress:scale-100 transition-transform duration-150 pointer-events-none"
                     ></div>
                 </div>
 
-                <!-- Control Buttons Row -->
-                <div class="w-full bg-slate-900/65 backdrop-blur-xl border border-white/10 rounded-2xl px-2.5 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between gap-2 shadow-2xl">
+                <!-- Floating Glassmorphism Control Pill -->
+                <div class="w-full bg-slate-950/65 backdrop-blur-2xl border border-white/12 rounded-2xl px-2.5 py-1.5 sm:px-4 sm:py-2.5 flex items-center justify-between gap-2 shadow-[0_12px_40px_rgba(0,0,0,0.75)]">
                     
-                    <!-- Left Controls: Play/Pause, Skip, Volume, Time -->
-                    <div class="flex items-center gap-1 sm:gap-2.5">
+                    <!-- Left Controls: Play/Pause, -10s / +10s, Volume, Time -->
+                    <div class="flex items-center gap-1 sm:gap-2">
                         <!-- Play/Pause Button -->
-                        <button id="playPauseBtn" title="Play/Pause (Space)" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-                            <i id="playPauseIcon" data-lucide="play" class="w-5 h-5 fill-current"></i>
+                        <button id="playPauseBtn" title="Play/Pause (Space / K)" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer">
+                            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                         </button>
 
-                        <!-- Rewind 5s -->
-                        <button id="rewindBtn" title="Rewind 5s (Left Arrow)" class="hidden sm:flex p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                        <!-- Skip -10s -->
+                        <button id="rewindBtn" title="Rewind 10s" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer flex items-center gap-0.5">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4 sm:w-[18px] sm:h-[18px]"></i>
+                            <span class="hidden lg:inline text-[11px] font-medium">10s</span>
                         </button>
 
-                        <!-- Forward 5s -->
-                        <button id="forwardBtn" title="Forward 5s (Right Arrow)" class="hidden sm:flex p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-                            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                        <!-- Skip +10s -->
+                        <button id="forwardBtn" title="Forward 10s" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer flex items-center gap-0.5">
+                            <i data-lucide="rotate-cw" class="w-4 h-4 sm:w-[18px] sm:h-[18px]"></i>
+                            <span class="hidden lg:inline text-[11px] font-medium">10s</span>
                         </button>
 
-                        <!-- Volume Controls -->
-                        <div class="flex items-center gap-1.5 group/vol">
-                            <button id="muteBtn" title="Mute/Unmute (M)" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-                                <i id="volumeIcon" data-lucide="volume-2" class="w-5 h-5"></i>
+                        <!-- Mute & Expandable Horizontal Volume Slider -->
+                        <div class="flex items-center gap-1 group/vol">
+                            <button id="muteBtn" title="Mute/Unmute (M)" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer">
+                                <i data-lucide="volume-2" class="w-5 h-5"></i>
                             </button>
-                            <div class="w-0 overflow-hidden group-hover/vol:w-16 sm:w-20 transition-all duration-200 flex items-center">
+                            <div class="w-0 overflow-hidden group-hover/vol:w-16 sm:group-hover/vol:w-24 focus-within:w-20 transition-all duration-200 flex items-center">
                                 <input 
                                     type="range" 
                                     id="volumeSlider" 
@@ -191,32 +177,32 @@
                             </div>
                         </div>
 
-                        <!-- Current Time / Total Duration -->
-                        <div class="text-xs sm:text-sm font-medium text-slate-300 tabular-nums pl-1 select-none">
+                        <!-- Current / Total Time Display -->
+                        <div class="text-xs sm:text-sm font-medium text-slate-400 tabular-nums pl-1 sm:pl-2">
                             <span id="currentTimeDisplay" class="text-white">00:00</span>
-                            <span class="text-slate-500 mx-1">/</span>
+                            <span class="mx-1 text-slate-600">/</span>
                             <span id="durationDisplay">00:00</span>
                         </div>
                     </div>
 
-                    <!-- Right Controls: Playback Speed, PiP, Theater, Fullscreen -->
+                    <!-- Right Controls: Playback Speed, PiP, Fullscreen -->
                     <div class="flex items-center gap-1 sm:gap-2">
                         <!-- Playback Speed Selector -->
                         <div class="relative">
                             <button 
                                 id="speedBtn" 
                                 title="Playback Speed"
-                                class="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white bg-white/5 hover:bg-white/15 border border-white/10 transition-all cursor-pointer tabular-nums"
+                                class="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white bg-white/5 hover:bg-white/15 border border-white/10 active:scale-95 transition-all cursor-pointer tabular-nums"
                             >
                                 1x
                             </button>
                             <!-- Speed Dropdown Menu -->
                             <div 
                                 id="speedMenu" 
-                                class="hidden absolute bottom-full right-0 mb-2 w-24 bg-slate-900/95 backdrop-blur-xl border border-white/15 rounded-xl p-1 shadow-2xl flex-col gap-0.5 z-40"
+                                class="hidden absolute bottom-full right-0 mb-2.5 w-24 bg-slate-900/95 backdrop-blur-2xl border border-white/15 rounded-xl p-1 shadow-2xl flex-col gap-0.5 z-50"
                             >
                                 <button data-speed="0.5" class="speed-option w-full text-left px-3 py-1.5 text-xs rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer">0.5x</button>
-                                <button data-speed="1" class="speed-option w-full text-left px-3 py-1.5 text-xs rounded-lg bg-indigo-600/30 text-indigo-300 font-semibold transition-colors cursor-pointer">1x</button>
+                                <button data-speed="1" class="speed-option w-full text-left px-3 py-1.5 text-xs rounded-lg bg-indigo-600/35 text-indigo-300 font-semibold transition-colors cursor-pointer">1x</button>
                                 <button data-speed="1.25" class="speed-option w-full text-left px-3 py-1.5 text-xs rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer">1.25x</button>
                                 <button data-speed="1.5" class="speed-option w-full text-left px-3 py-1.5 text-xs rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer">1.5x</button>
                                 <button data-speed="2" class="speed-option w-full text-left px-3 py-1.5 text-xs rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer">2x</button>
@@ -224,18 +210,13 @@
                         </div>
 
                         <!-- Picture-in-Picture Toggle -->
-                        <button id="pipBtn" title="Picture-in-Picture" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+                        <button id="pipBtn" title="Picture-in-Picture" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer">
                             <i data-lucide="picture-in-picture-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                         </button>
 
-                        <!-- Theater Mode Toggle -->
-                        <button id="theaterBtn" title="Theater Mode (T)" class="hidden md:flex p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-                            <i id="theaterIcon" data-lucide="rectangle-horizontal" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                        </button>
-
                         <!-- Fullscreen Toggle -->
-                        <button id="fullscreenBtn" title="Fullscreen (F)" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-                            <i id="fullscreenIcon" data-lucide="maximize" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        <button id="fullscreenBtn" title="Fullscreen (F)" class="p-2 rounded-xl text-slate-200 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer">
+                            <i data-lucide="maximize" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                         </button>
                     </div>
 
@@ -243,48 +224,38 @@
             </div>
         </div>
 
-        <!-- Keyboard Shortcuts Legend -->
-        <footer id="shortcutsFooter" class="w-full flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] sm:text-xs text-slate-400 px-2">
-            <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 bg-slate-800/80 border border-white/10 rounded text-slate-300 font-mono">Space</kbd> Play/Pause</span>
-            <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 bg-slate-800/80 border border-white/10 rounded text-slate-300 font-mono">← / →</kbd> Seek ±5s</span>
-            <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 bg-slate-800/80 border border-white/10 rounded text-slate-300 font-mono">↑ / ↓</kbd> Volume</span>
-            <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 bg-slate-800/80 border border-white/10 rounded text-slate-300 font-mono">M</kbd> Mute</span>
-            <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 bg-slate-800/80 border border-white/10 rounded text-slate-300 font-mono">F</kbd> Fullscreen</span>
-        </footer>
-
     </main>
 
     <script>
         /**
-         * AetherStream Glassmorphism Video Player Logic
-         * Handles playback, seeking, touch/mouse scrubbing, volume, speeds, PiP, Theater, Fullscreen, and shortcuts.
+         * Full-Page Responsive HTML5 Glassmorphism Video Player
          */
         document.addEventListener('DOMContentLoaded', () => {
-            // Initialize Lucide icons
             lucide.createIcons();
 
-            // DOM Elements
-            const appContainer = document.getElementById('appContainer');
+            // Core Elements
             const playerContainer = document.getElementById('playerContainer');
             const video = document.getElementById('videoElement');
-            const urlForm = document.getElementById('urlForm');
-            const videoUrlInput = document.getElementById('videoUrlInput');
-            const videoTitleDisplay = document.getElementById('videoTitleDisplay');
-
-            // Toast Notification Elements
-            const toastBanner = document.getElementById('toastBanner');
-            const toastMessage = document.getElementById('toastMessage');
-            const closeToastBtn = document.getElementById('closeToastBtn');
-
-            // Overlays & Feedback
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            const centerOverlay = document.getElementById('centerOverlay');
-            const centerPlayBtn = document.getElementById('centerPlayBtn');
             const controlsOverlay = document.getElementById('controlsOverlay');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+
+            // Gesture & Center Feedback Elements
+            const leftZone = document.getElementById('leftZone');
+            const centerZone = document.getElementById('centerZone');
+            const rightZone = document.getElementById('rightZone');
+            const leftSkipRipple = document.getElementById('leftSkipRipple');
+            const rightSkipRipple = document.getElementById('rightSkipRipple');
+            const centerPlayBtn = document.getElementById('centerPlayBtn');
+            const centerPulseBadge = document.getElementById('centerPulseBadge');
             const actionBadge = document.getElementById('actionBadge');
             const actionBadgeText = document.getElementById('actionBadgeText');
 
-            // Progress Bar Elements
+            // Error Fallback Elements
+            const errorOverlay = document.getElementById('errorOverlay');
+            const errorMessage = document.getElementById('errorMessage');
+            const retryBtn = document.getElementById('retryBtn');
+
+            // Timeline Elements
             const progressContainer = document.getElementById('progressContainer');
             const bufferedBar = document.getElementById('bufferedBar');
             const progressBar = document.getElementById('progressBar');
@@ -299,25 +270,25 @@
             const volumeSlider = document.getElementById('volumeSlider');
             const currentTimeDisplay = document.getElementById('currentTimeDisplay');
             const durationDisplay = document.getElementById('durationDisplay');
-
-            // Speed, PiP, Theater, Fullscreen
             const speedBtn = document.getElementById('speedBtn');
             const speedMenu = document.getElementById('speedMenu');
             const speedOptions = document.querySelectorAll('.speed-option');
             const pipBtn = document.getElementById('pipBtn');
-            const theaterBtn = document.getElementById('theaterBtn');
             const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-            // State Variables
+            // Player State
             let isDraggingProgress = false;
             let hideControlsTimeout = null;
             let badgeTimeout = null;
-            let isTheaterMode = false;
+            let pulseTimeout = null;
+            let leftRippleTimeout = null;
+            let rightRippleTimeout = null;
             let lastVolume = 1;
 
-            /**
-             * Formats seconds into HH:MM:SS or MM:SS
-             */
+            // Touch / Click Gesture Timers
+            let lastTapTime = 0;
+            let singleTapTimer = null;
+
             function formatTime(seconds) {
                 if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '00:00';
                 const hrs = Math.floor(seconds / 3600);
@@ -329,9 +300,6 @@
                 return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
 
-            /**
-             * Displays a temporary floating badge inside the player for visual feedback
-             */
             function showActionBadge(text) {
                 actionBadgeText.textContent = text;
                 actionBadge.classList.remove('opacity-0', 'scale-95');
@@ -343,68 +311,83 @@
                 }, 900);
             }
 
-            /**
-             * Shows non-blocking toast notification for errors/notices
-             */
-            function showToast(msg) {
-                toastMessage.textContent = msg;
-                toastBanner.classList.remove('hidden');
+            function triggerCenterPulse(isNowPlaying) {
+                const iconName = isNowPlaying ? 'play' : 'pause';
+                centerPulseBadge.innerHTML = `<i data-lucide="${iconName}" class="w-7 h-7 sm:w-8 sm:h-8 fill-white ${isNowPlaying ? 'ml-1' : ''}"></i>`;
+                lucide.createIcons();
+
+                centerPulseBadge.classList.remove('opacity-0', 'scale-75');
+                centerPulseBadge.classList.add('opacity-100', 'scale-100');
+                clearTimeout(pulseTimeout);
+                pulseTimeout = setTimeout(() => {
+                    centerPulseBadge.classList.remove('opacity-100', 'scale-100');
+                    centerPulseBadge.classList.add('opacity-0', 'scale-110');
+                    setTimeout(() => {
+                        centerPulseBadge.classList.remove('scale-110');
+                        centerPulseBadge.classList.add('scale-75');
+                    }, 180);
+                }, 420);
             }
 
-            closeToastBtn.addEventListener('click', () => {
-                toastBanner.classList.add('hidden');
-            });
+            function triggerSkipRipple(direction) {
+                const el = direction === 'left' ? leftSkipRipple : rightSkipRipple;
+                el.classList.remove('opacity-0', 'scale-75');
+                el.classList.add('opacity-100', 'scale-100');
 
-            /**
-             * Updates Play/Pause icons across center overlay and bottom bar
-             */
+                if (direction === 'left') {
+                    clearTimeout(leftRippleTimeout);
+                    leftRippleTimeout = setTimeout(() => {
+                        el.classList.remove('opacity-100', 'scale-100');
+                        el.classList.add('opacity-0', 'scale-75');
+                    }, 550);
+                } else {
+                    clearTimeout(rightRippleTimeout);
+                    rightRippleTimeout = setTimeout(() => {
+                        el.classList.remove('opacity-100', 'scale-100');
+                        el.classList.add('opacity-0', 'scale-75');
+                    }, 550);
+                }
+            }
+
             function updatePlayPauseUI() {
                 const isPaused = video.paused || video.ended;
                 const iconName = isPaused ? 'play' : 'pause';
 
-                // Update bottom button icon
                 playPauseBtn.innerHTML = `<i data-lucide="${iconName}" class="w-5 h-5 fill-current"></i>`;
-                // Update center button icon
                 centerPlayBtn.innerHTML = `<i data-lucide="${iconName}" class="w-7 h-7 sm:w-8 sm:h-8 fill-white ${isPaused ? 'ml-1' : ''}"></i>`;
                 lucide.createIcons();
 
                 if (isPaused) {
-                    centerOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                    centerPlayBtn.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
                     showControls();
                 } else {
-                    centerOverlay.classList.add('opacity-0', 'pointer-events-none');
+                    centerPlayBtn.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
                     scheduleHideControls();
                 }
             }
 
-            /**
-             * Toggles Play / Pause state safely
-             */
-            async function togglePlay() {
+            async function togglePlay(withPulse = false) {
                 try {
                     if (video.paused || video.ended) {
                         await video.play();
+                        if (withPulse) triggerCenterPulse(true);
                     } else {
                         video.pause();
+                        if (withPulse) triggerCenterPulse(false);
                     }
                 } catch (err) {
                     console.error('Playback error:', err);
-                    showToast('Playback interrupted or blocked by browser. Click Play to retry.');
                 }
             }
 
-            /**
-             * Seeks relative to current time
-             */
-            function seekBy(seconds) {
+            function seekBy(seconds, showBadge = true) {
                 if (!video.duration) return;
                 video.currentTime = Math.min(Math.max(0, video.currentTime + seconds), video.duration);
-                showActionBadge(seconds > 0 ? `+${seconds}s` : `${seconds}s`);
+                if (showBadge) {
+                    showActionBadge(seconds > 0 ? `+${seconds}s` : `${seconds}s`);
+                }
             }
 
-            /**
-             * Updates Volume Icon based on mute state & level
-             */
             function updateVolumeUI() {
                 const vol = video.muted ? 0 : video.volume;
                 volumeSlider.value = vol;
@@ -416,9 +399,6 @@
                 lucide.createIcons();
             }
 
-            /**
-             * Sets volume safely and updates UI
-             */
             function setVolume(newVol) {
                 const clamped = Math.min(Math.max(0, newVol), 1);
                 video.volume = clamped;
@@ -428,9 +408,6 @@
                 showActionBadge(`Volume ${Math.round(clamped * 100)}%`);
             }
 
-            /**
-             * Toggles Mute
-             */
             function toggleMute() {
                 if (video.muted || video.volume === 0) {
                     video.muted = false;
@@ -443,9 +420,6 @@
                 showActionBadge(video.muted ? 'Muted' : `Volume ${Math.round(video.volume * 100)}%`);
             }
 
-            /**
-             * Updates Progress Bar & Time Displays
-             */
             function updateProgress() {
                 if (!video.duration || isDraggingProgress) return;
                 const percent = (video.currentTime / video.duration) * 100;
@@ -454,23 +428,15 @@
                 currentTimeDisplay.textContent = formatTime(video.currentTime);
             }
 
-            /**
-             * Updates Buffered Bar
-             */
             function updateBuffer() {
                 if (!video.duration || video.buffered.length === 0) return;
                 try {
                     const bufferedEnd = video.buffered.end(video.buffered.length - 1);
                     const percent = Math.min((bufferedEnd / video.duration) * 100, 100);
                     bufferedBar.style.width = `${percent}%`;
-                } catch (e) {
-                    // Ignore range errors when source changes
-                }
+                } catch (e) {}
             }
 
-            /**
-             * Handles scrubbing/seeking along the progress bar
-             */
             function scrubToEvent(clientX) {
                 const rect = progressContainer.getBoundingClientRect();
                 const pos = Math.min(Math.max(0, clientX - rect.left), rect.width);
@@ -488,9 +454,6 @@
                 return 0;
             }
 
-            /**
-             * Auto-hide controls on mouse inactivity during playback
-             */
             function showControls() {
                 controlsOverlay.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
                 playerContainer.classList.remove('cursor-none');
@@ -503,13 +466,10 @@
                     hideControlsTimeout = setTimeout(() => {
                         controlsOverlay.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
                         playerContainer.classList.add('cursor-none');
-                    }, 2600);
+                    }, 2500);
                 }
             }
 
-            /**
-             * Fullscreen Toggle
-             */
             async function toggleFullscreen() {
                 try {
                     if (!document.fullscreenElement) {
@@ -518,7 +478,7 @@
                         await document.exitFullscreen();
                     }
                 } catch (err) {
-                    showToast('Fullscreen mode is not supported or blocked in this view.');
+                    showActionBadge('Fullscreen Blocked');
                 }
             }
 
@@ -526,34 +486,8 @@
                 const isFs = !!document.fullscreenElement;
                 fullscreenBtn.innerHTML = `<i data-lucide="${isFs ? 'minimize' : 'maximize'}" class="w-4 h-4 sm:w-5 sm:h-5"></i>`;
                 lucide.createIcons();
-                if (isFs) {
-                    playerContainer.classList.remove('rounded-2xl', 'sm:rounded-3xl');
-                } else {
-                    playerContainer.classList.add('rounded-2xl', 'sm:rounded-3xl');
-                }
             });
 
-            /**
-             * Theater Mode Toggle
-             */
-            function toggleTheaterMode() {
-                isTheaterMode = !isTheaterMode;
-                if (isTheaterMode) {
-                    appContainer.classList.remove('max-w-5xl');
-                    appContainer.classList.add('max-w-full');
-                    playerContainer.classList.add('max-h-[82vh]');
-                    showActionBadge('Theater Mode');
-                } else {
-                    appContainer.classList.add('max-w-5xl');
-                    appContainer.classList.remove('max-w-full');
-                    playerContainer.classList.remove('max-h-[82vh]');
-                    showActionBadge('Default View');
-                }
-            }
-
-            /**
-             * Picture-in-Picture Toggle
-             */
             async function togglePiP() {
                 try {
                     if (document.pictureInPictureElement) {
@@ -561,50 +495,62 @@
                     } else if (document.pictureInPictureEnabled) {
                         await video.requestPictureInPicture();
                     } else {
-                        showToast('Picture-in-Picture is not supported by your browser.');
+                        showActionBadge('PiP Unsupported');
                     }
                 } catch (err) {
-                    showToast('Unable to enter Picture-in-Picture mode.');
+                    showActionBadge('PiP Unavailable');
                 }
             }
 
             /**
-             * Load Custom Video URL
+             * Gesture Zone Handlers:
+             * - Single click/tap anywhere toggles Play/Pause (with center pulse) & reveals controls
+             * - Double-click/double-tap on Left edge skips -10s with ripple
+             * - Double-click/double-tap on Right edge skips +10s with ripple
+             * - Double-click on Center toggles Fullscreen
              */
-            urlForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const rawUrl = videoUrlInput.value.trim();
-                if (!rawUrl) return;
+            function handleZoneInteraction(zone) {
+                const now = Date.now();
+                const timeSinceLastTap = now - lastTapTime;
 
-                toastBanner.classList.add('hidden');
-                loadingSpinner.classList.remove('opacity-0');
+                if (timeSinceLastTap < 280 && timeSinceLastTap > 0) {
+                    // Double Tap / Double Click detected
+                    clearTimeout(singleTapTimer);
+                    lastTapTime = 0;
 
-                // Extract filename for display title
-                try {
-                    const urlObj = new URL(rawUrl);
-                    const pathname = decodeURIComponent(urlObj.pathname);
-                    const fileName = pathname.split('/').filter(Boolean).pop() || urlObj.hostname;
-                    videoTitleDisplay.textContent = fileName;
-                } catch {
-                    videoTitleDisplay.textContent = 'Custom Video Stream';
+                    if (zone === 'left') {
+                        seekBy(-10, false);
+                        triggerSkipRipple('left');
+                        showControls();
+                    } else if (zone === 'right') {
+                        seekBy(10, false);
+                        triggerSkipRipple('right');
+                        showControls();
+                    } else if (zone === 'center') {
+                        toggleFullscreen();
+                    }
+                } else {
+                    // Potential Single Tap / Click
+                    lastTapTime = now;
+                    clearTimeout(singleTapTimer);
+                    singleTapTimer = setTimeout(() => {
+                        togglePlay(true);
+                        showControls();
+                    }, 220);
                 }
+            }
 
-                // Reset progress UI
-                progressBar.style.width = '0%';
-                bufferedBar.style.width = '0%';
-                progressThumb.style.left = '0%';
-                currentTimeDisplay.textContent = '00:00';
-                durationDisplay.textContent = '00:00';
-
-                video.src = rawUrl;
-                video.load();
-                video.play().catch(() => {
-                    // Autoplay might be blocked; user can click play manually
-                    updatePlayPauseUI();
-                });
+            leftZone.addEventListener('click', () => handleZoneInteraction('left'));
+            centerZone.addEventListener('click', (e) => {
+                if (e.target.closest('#centerPlayBtn')) {
+                    togglePlay(false);
+                    return;
+                }
+                handleZoneInteraction('center');
             });
+            rightZone.addEventListener('click', () => handleZoneInteraction('right'));
 
-            // Video Element Event Listeners
+            // Video Element Events
             video.addEventListener('play', updatePlayPauseUI);
             video.addEventListener('pause', updatePlayPauseUI);
             video.addEventListener('ended', updatePlayPauseUI);
@@ -614,6 +560,7 @@
             video.addEventListener('loadedmetadata', () => {
                 durationDisplay.textContent = formatTime(video.duration);
                 loadingSpinner.classList.add('opacity-0');
+                errorOverlay.classList.add('hidden');
                 updateBuffer();
             });
 
@@ -623,30 +570,37 @@
 
             video.addEventListener('canplay', () => {
                 loadingSpinner.classList.add('opacity-0');
+                errorOverlay.classList.add('hidden');
             });
 
             video.addEventListener('error', () => {
                 loadingSpinner.classList.add('opacity-0');
+                errorOverlay.classList.remove('hidden');
                 updatePlayPauseUI();
-                showToast('Failed to load video. The link may be unreachable, expired, or restricted.');
             });
 
-            // Click / Double-click on Video & Center Overlay
-            video.addEventListener('click', togglePlay);
-            centerOverlay.addEventListener('click', togglePlay);
-            video.addEventListener('dblclick', toggleFullscreen);
+            retryBtn.addEventListener('click', () => {
+                errorOverlay.classList.add('hidden');
+                loadingSpinner.classList.remove('opacity-0');
+                const currentSrc = video.src;
+                video.src = '';
+                video.src = currentSrc;
+                video.load();
+                video.play().catch(() => {
+                    loadingSpinner.classList.add('opacity-0');
+                });
+            });
 
-            // Button Listeners
-            playPauseBtn.addEventListener('click', togglePlay);
-            rewindBtn.addEventListener('click', () => seekBy(-5));
-            forwardBtn.addEventListener('click', () => seekBy(5));
+            // Control Bar Buttons
+            playPauseBtn.addEventListener('click', () => togglePlay(false));
+            rewindBtn.addEventListener('click', () => seekBy(-10));
+            forwardBtn.addEventListener('click', () => seekBy(10));
             muteBtn.addEventListener('click', toggleMute);
             volumeSlider.addEventListener('input', (e) => setVolume(parseFloat(e.target.value)));
             pipBtn.addEventListener('click', togglePiP);
-            theaterBtn.addEventListener('click', toggleTheaterMode);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
 
-            // Playback Speed Menu Logic
+            // Playback Speed Menu
             speedBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 speedMenu.classList.toggle('hidden');
@@ -661,10 +615,10 @@
                     speedBtn.textContent = `${speed}x`;
 
                     speedOptions.forEach(opt => {
-                        opt.classList.remove('bg-indigo-600/30', 'text-indigo-300', 'font-semibold');
+                        opt.classList.remove('bg-indigo-600/35', 'text-indigo-300', 'font-semibold');
                         opt.classList.add('text-slate-300');
                     });
-                    option.classList.add('bg-indigo-600/30', 'text-indigo-300', 'font-semibold');
+                    option.classList.add('bg-indigo-600/35', 'text-indigo-300', 'font-semibold');
                     option.classList.remove('text-slate-300');
 
                     speedMenu.classList.add('hidden');
@@ -680,7 +634,7 @@
                 }
             });
 
-            // Progress Bar Hover Tooltip & Scrubbing (Mouse + Touch)
+            // Timeline Scrubber (Mouse + Touch)
             progressContainer.addEventListener('mousemove', (e) => {
                 const rect = progressContainer.getBoundingClientRect();
                 const pos = Math.min(Math.max(0, e.clientX - rect.left), rect.width);
@@ -722,7 +676,6 @@
                 }
             });
 
-            // Touch Support for Progress Bar
             progressContainer.addEventListener('touchstart', (e) => {
                 isDraggingProgress = true;
                 const touch = e.touches[0];
@@ -742,7 +695,7 @@
                 scheduleHideControls();
             });
 
-            // Mouse Activity Auto-Hide Triggers
+            // Auto-hide Controls on Mouse / Touch Activity
             playerContainer.addEventListener('mousemove', showControls);
             playerContainer.addEventListener('touchstart', showControls, { passive: true });
             playerContainer.addEventListener('mouseleave', () => {
@@ -751,14 +704,13 @@
                 }
             });
 
-            // Global Keyboard Shortcuts (Ignore when typing in URL input)
+            // Keyboard Shortcuts (Space, K, Arrows, M, F)
             document.addEventListener('keydown', (e) => {
-                if (document.activeElement === videoUrlInput) return;
-
                 switch (e.code) {
                     case 'Space':
+                    case 'KeyK':
                         e.preventDefault();
-                        togglePlay();
+                        togglePlay(true);
                         showControls();
                         break;
                     case 'ArrowLeft':
@@ -789,10 +741,6 @@
                     case 'KeyF':
                         e.preventDefault();
                         toggleFullscreen();
-                        break;
-                    case 'KeyT':
-                        e.preventDefault();
-                        toggleTheaterMode();
                         break;
                 }
             });
